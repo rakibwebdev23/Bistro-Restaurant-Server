@@ -50,7 +50,7 @@ async function run() {
             const query = { email: email }
             const result = await cartCollection.find(query).toArray();
             res.send(result);
-        });
+        });      
 
         app.post("/carts", async (req, res) => {
             const cartsItem = req.body;
@@ -58,6 +58,7 @@ async function run() {
             res.send(result);
         });
 
+        // delete cart
         app.delete("/carts/:id", async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
