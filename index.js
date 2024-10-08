@@ -69,7 +69,7 @@ async function run() {
         }
 
         // Users Collection
-        app.get("/users", verifyToken,verifyAdmin, async (req, res) => {
+        app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
             const result = await userCollection.find().toArray();
             res.send(result);
         })
@@ -104,8 +104,8 @@ async function run() {
             res.send(result);
         })
 
-        // admin role check to id
-        app.patch("/users/admin/:id",verifyToken,verifyAdmin, async (req, res) => {
+        // admin role check & make admin
+        app.patch("/users/admin/:id", verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) }
             const updatedDoc = {
@@ -118,7 +118,7 @@ async function run() {
         })
 
         // User delete from admin 
-        app.delete("/users/:id",verifyToken,verifyAdmin, async (req, res) => {
+        app.delete("/users/:id", verifyToken, verifyAdmin, async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) }
             const result = await userCollection.deleteOne(query);
@@ -130,6 +130,12 @@ async function run() {
             const result = await menuCollection.find().toArray();
             res.send(result);
         });
+
+        app.post("/menu",verifyToken, verifyAdmin, async (req, res) => {
+            const menuItem = req.body;
+            const result = await menuCollection.insertOne(menuItem);
+            res.send(result);
+        })
 
         // Reviews collection
         app.get("/reviews", async (req, res) => {
@@ -169,7 +175,6 @@ async function run() {
     }
 }
 run().catch(console.dir);
-
 
 
 app.get('/', (req, res) => {
