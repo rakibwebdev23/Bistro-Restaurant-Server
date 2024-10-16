@@ -247,6 +247,77 @@ async function run() {
             const deleteResult = await cartCollection.deleteMany(query);
             console.log('Payment info', payment, query, deleteResult);
             res.send({ paymentRes, deleteResult });
+        });
+
+        // Stats or analytics(Admin Home)
+        app.get('/admin-stats',verifyToken,verifyAdmin, async (req, res) => {
+            const users = await userCollection.estimatedDocumentCount();
+            const menuItems = await menuCollection.estimatedDocumentCount();
+            const orders = await paymentCollection.estimatedDocumentCount();
+
+            // this is not the best way for revenue count
+            // const payments = await paymentCollection.find().toArray();
+            // const revenue = payments.reduce((total, payment) => total + payment.price, 0);
+
+            // best way for revenue count
+            const result = await paymentCollection.aggregate([
+                {
+                    $group: {
+                        _id: null,
+                        totalRevenue: {
+                            $sum: "$price"
+                        }
+                    }
+                }
+            ]).toArray();
+
+            const revenue = result.length > 0 ? result[0].totalRevenue : 0;
+
+            res.send({
+                users,
+                menuItems,
+                orders,
+                revenue
+            })
+        });
+
+        /**
+         * -----------------------
+         * Non-Efficient way
+         * -----------------------
+         * 1. Load all the payments.
+         * 2. For every menuItemIds (which is an array), go find the item from menu collection.
+         * 3. For every item in the menu collection that you found from a payment entry (document);
+         * */
+        
+        // Using aggregate pipeline
+        app.get('/order-stats', async (req, res) => {
+            const result = await paymentCollection.aggregate([
+                {
+                    $unwind: "$menuItemIds" //Unwind the array of menu item ids
+                },
+                {
+                    $lookup: {
+                        from: "menu", // The 'menu' collection
+                        localField: "menuItemIds", // Field in the 'payments' collection
+                        foreignField: "_id", // Matching field in the 'menu' collection
+                        as: "menuItems" //The result will be stored in this field
+                    }
+                },
+                {
+                    $unwind: "$menuItems" // Unwind the joined menu items array
+                },
+                {
+                    $group: {
+                        _id: "$menuItems.category", //Group by category
+                        totalQuantity: { $sum: 1 }, //Count the number of items ordered per category
+                        totalRevenue: {$sum: "$menuItems.price"} // Calculate the total revenue per category
+                    }
+                }
+
+            ]).toArray();
+
+            res.send(result);
         })
 
         // Send a ping to confirm a successful connection
