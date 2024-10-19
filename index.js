@@ -28,7 +28,7 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
+        // await client.connect(); 
 
         const userCollection = client.db("bistroDB").collection("users");
         const menuCollection = client.db("bistroDB").collection("menu");
@@ -211,7 +211,7 @@ async function run() {
         app.post('/create-payment-intent', verifyToken, async (req, res) => {
             const { price } = req.body;
             const amount = parseInt(price * 100);
-            console.log('amount inside the intent', amount);
+            // console.log('amount inside the intent', amount);
 
             const paymentIntent = await stripe.paymentIntents.create({
                 amount: amount,
@@ -245,7 +245,7 @@ async function run() {
                 }
             }
             const deleteResult = await cartCollection.deleteMany(query);
-            console.log('Payment info', payment, query, deleteResult);
+            // console.log('Payment info', payment, query, deleteResult);
             res.send({ paymentRes, deleteResult });
         });
 
@@ -291,7 +291,7 @@ async function run() {
          * */
         
         // Using aggregate pipeline
-        app.get('/order-stats', async (req, res) => {
+        app.get('/order-stats', verifyToken, verifyAdmin, async (req, res) => {
             const result = await paymentCollection.aggregate([
                 {
                     $unwind: "$menuItemIds" //Unwind the array of menu item ids
@@ -313,6 +313,14 @@ async function run() {
                         totalQuantity: { $sum: 1 }, //Count the number of items ordered per category
                         totalRevenue: {$sum: "$menuItems.price"} // Calculate the total revenue per category
                     }
+                },
+                {
+                    $project: {
+                        _id: 0,
+                        category: "$_id",
+                        totalQuantity: "$totalQuantity",
+                        totalRevenue: "$totalRevenue"
+                    }
                 }
 
             ]).toArray();
@@ -321,8 +329,8 @@ async function run() {
         })
 
         // Send a ping to confirm a successful connection
-        await client.db("admin").command({ ping: 1 });
-        console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        // await client.db("admin").command({ ping: 1 });
+        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
     } finally {
         // Ensures that the client will close when you finish/error
         // await client.close();
